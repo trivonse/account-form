@@ -26,6 +26,7 @@
   }
 
   function handleAddAccount(): void {
+    showEmpty.value = false
     store.createEmptyAccount()
   }
 
