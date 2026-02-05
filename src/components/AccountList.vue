@@ -8,12 +8,16 @@
   const accounts = computed(() => store.getAllAccounts())
   const showEmpty = ref(accounts.value.length === 0)
 
-  // show empty state immediately when no accounts, but delay hide for animation
-  watch(accounts, (newVal) => {
-    if (newVal.length > 0) {
-      showEmpty.value = false
-    }
-  })
+  // hide empty state when accounts added
+  watch(
+    accounts,
+    (newVal) => {
+      if (newVal.length > 0) {
+        showEmpty.value = false
+      }
+    },
+    { immediate: true }
+  )
 
   function onAfterLeave() {
     if (accounts.value.length === 0) {
