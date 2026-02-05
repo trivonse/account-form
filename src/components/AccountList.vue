@@ -68,15 +68,13 @@
       </TransitionGroup>
     </div>
 
-    <Transition name="fade">
-      <div v-if="showEmpty" class="empty-state">
-        <div class="empty-icon">
-          <UIcon name="i-lucide-users" />
-        </div>
-        <p class="empty-text">Пока пусто</p>
-        <p class="empty-subtext">Нажми "Добавить" чтобы создать первый аккаунт</p>
+    <div v-if="showEmpty" class="empty-state">
+      <div class="empty-icon">
+        <UIcon name="i-lucide-users" />
       </div>
-    </Transition>
+      <p class="empty-text">Пока пусто</p>
+      <p class="empty-subtext">Нажми "Добавить" чтобы создать первый аккаунт</p>
+    </div>
   </div>
 </template>
 
@@ -192,15 +190,6 @@
     transition: transform 0.3s ease;
   }
 
-  /* empty state fade */
-  .fade-enter-active,
-  .fade-leave-active {
-    transition: opacity 0.3s ease;
-  }
-  .fade-enter-from,
-  .fade-leave-to {
-    opacity: 0;
-  }
 
   @media (max-width: 768px) {
     .account-list-container {
