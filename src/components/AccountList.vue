@@ -1,11 +1,25 @@
 <script setup lang="ts">
-  import { computed } from 'vue'
+  import { computed, ref, watch } from 'vue'
   import { useAccountsStore } from '../stores/accounts'
   import AccountItem from './AccountItem.vue'
 
   const store = useAccountsStore()
 
   const accounts = computed(() => store.getAllAccounts())
+  const showEmpty = ref(accounts.value.length === 0)
+
+  // show empty state immediately when no accounts, but delay hide for animation
+  watch(accounts, (newVal) => {
+    if (newVal.length > 0) {
+      showEmpty.value = false
+    }
+  })
+
+  function onAfterLeave() {
+    if (accounts.value.length === 0) {
+      showEmpty.value = true
+    }
+  }
 
   function handleAddAccount(): void {
     store.createEmptyAccount()
@@ -20,30 +34,26 @@
 <template>
   <div class="account-list-container">
     <div class="header">
-      <h1 class="page-title">Account Management</h1>
+      <div class="header-left">
+        <h1 class="page-title">Управление аккаунтами</h1>
+        <span v-if="accounts.length > 0" class="account-count">
+          {{ accounts.length }}
+          {{ accounts.length === 1 ? 'аккаунт' : accounts.length < 5 ? 'аккаунта' : 'аккаунтов' }}
+        </span>
+      </div>
       <UButton color="primary" icon="i-lucide-plus" @click="handleAddAccount">
-        Add Account
+        Добавить
       </UButton>
     </div>
 
     <!-- TODO: maybe make this collapsible? -->
     <p class="hint-text">
-      <strong>Hint:</strong> Labels are separated by "<code>;</code>"
-      (semicolon). Example: "admin; user; guest"
+      <strong>Подсказка:</strong> Метки разделяются через "<code>;</code>".
+      Например: "админ; юзер; гость"
     </p>
 
-    <div v-if="accounts.length === 0" class="empty-state">
-      <div class="empty-icon">
-        <UIcon name="i-lucide-users" />
-      </div>
-      <p class="empty-text">No accounts yet</p>
-      <p class="empty-subtext">
-        Click the "Add Account" button to create your first account.
-      </p>
-    </div>
-
-    <div v-else class="accounts-wrapper">
-      <TransitionGroup name="list">
+    <div class="accounts-wrapper">
+      <TransitionGroup name="list" @after-leave="onAfterLeave">
         <AccountItem
           v-for="account in accounts"
           :key="account.id"
@@ -53,11 +63,15 @@
       </TransitionGroup>
     </div>
 
-    <div v-if="accounts.length > 0" class="footer-info">
-      <span class="account-count">
-        {{ accounts.length }} account{{ accounts.length !== 1 ? 's' : '' }}
-      </span>
-    </div>
+    <Transition name="fade">
+      <div v-if="showEmpty" class="empty-state">
+        <div class="empty-icon">
+          <UIcon name="i-lucide-users" />
+        </div>
+        <p class="empty-text">Пока пусто</p>
+        <p class="empty-subtext">Нажми "Добавить" чтобы создать первый аккаунт</p>
+      </div>
+    </Transition>
   </div>
 </template>
 
@@ -69,17 +83,37 @@
   }
 
   .header {
+    position: sticky;
+    top: 0;
+    z-index: 10;
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 1rem;
+    margin: -2rem -2rem 1rem -2rem;
+    padding: 1rem 2rem;
+    background-color: var(--ui-bg);
+    border-bottom: 1px solid var(--ui-border);
+  }
+
+  .header-left {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
   }
 
   .page-title {
-    font-size: 1.75rem;
+    font-size: 1.5rem;
     font-weight: 600;
     color: var(--ui-text);
     margin: 0;
+  }
+
+  .account-count {
+    font-size: 0.875rem;
+    color: var(--ui-text-muted);
+    background-color: var(--ui-bg-muted);
+    padding: 0.25rem 0.75rem;
+    border-radius: 20px;
   }
 
   .hint-text {
@@ -129,22 +163,17 @@
   .accounts-wrapper {
     display: flex;
     flex-direction: column;
-  }
-
-  .footer-info {
-    margin-top: 1rem;
-    text-align: right;
-  }
-
-  .account-count {
-    font-size: 0.875rem;
-    color: var(--ui-text-muted);
+    position: relative;
   }
 
   /* animations */
-  .list-enter-active,
+  .list-enter-active {
+    transition: all 0.3s ease;
+  }
   .list-leave-active {
     transition: all 0.3s ease;
+    position: absolute;
+    width: 100%;
   }
   .list-enter-from {
     opacity: 0;
@@ -152,10 +181,20 @@
   }
   .list-leave-to {
     opacity: 0;
-    transform: translateX(20px);
+    transform: translateX(30px);
   }
   .list-move {
     transition: transform 0.3s ease;
+  }
+
+  /* empty state fade */
+  .fade-enter-active,
+  .fade-leave-active {
+    transition: opacity 0.3s ease;
+  }
+  .fade-enter-from,
+  .fade-leave-to {
+    opacity: 0;
   }
 
   @media (max-width: 768px) {
@@ -163,12 +202,19 @@
       padding: 1rem;
     }
     .header {
+      margin: -1rem -1rem 1rem -1rem;
+      padding: 1rem;
       flex-direction: column;
       align-items: stretch;
-      gap: 1rem;
+      gap: 0.75rem;
+    }
+    .header-left {
+      flex-direction: column;
+      align-items: center;
+      gap: 0.5rem;
     }
     .page-title {
-      font-size: 1.5rem;
+      font-size: 1.25rem;
       text-align: center;
     }
   }

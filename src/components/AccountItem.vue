@@ -1,5 +1,5 @@
 <script setup lang="ts">
-  import { reactive, computed, watch, onMounted } from 'vue'
+  import { reactive, computed, watch, onMounted, ref } from 'vue'
   import { useAccountsStore } from '../stores/accounts'
   import {
     AccountType,
@@ -49,6 +49,7 @@
   ]
 
   const showPassword = computed(() => formState.type === AccountType.LOCAL)
+  const passwordVisible = ref(false)
 
   // parse "label1; label2; label3" into array
   function parseLabels(input: string): Label[] {
@@ -69,7 +70,7 @@
   function validateLabel(): boolean {
     const val = formState.labelInput
     if (val.length > VALIDATION_CONSTRAINTS.LABEL_MAX_LENGTH) {
-      errors.label = `Label must be at most ${VALIDATION_CONSTRAINTS.LABEL_MAX_LENGTH} characters`
+      errors.label = `Макс ${VALIDATION_CONSTRAINTS.LABEL_MAX_LENGTH} символов`
       return false
     }
     errors.label = null
@@ -78,12 +79,12 @@
 
   function validateType(): boolean {
     if (!formState.type) {
-      errors.type = 'Type is required'
+      errors.type = 'Обязательно'
       return false
     }
     // this check is kinda redundant but whatever
     if (!Object.values(AccountType).includes(formState.type)) {
-      errors.type = 'Invalid account type'
+      errors.type = 'Неверный тип'
       return false
     }
     errors.type = null
@@ -93,11 +94,11 @@
   function validateLogin(): boolean {
     const val = formState.login.trim()
     if (!val) {
-      errors.login = 'Login is required'
+      errors.login = 'Обязательно'
       return false
     }
     if (val.length > VALIDATION_CONSTRAINTS.LOGIN_MAX_LENGTH) {
-      errors.login = `Login must be at most ${VALIDATION_CONSTRAINTS.LOGIN_MAX_LENGTH} characters`
+      errors.login = `Макс ${VALIDATION_CONSTRAINTS.LOGIN_MAX_LENGTH} символов`
       return false
     }
     errors.login = null
@@ -113,11 +114,11 @@
 
     const val = formState.password.trim()
     if (!val) {
-      errors.password = 'Password is required for LOCAL accounts'
+      errors.password = 'Обязательно'
       return false
     }
     if (val.length > VALIDATION_CONSTRAINTS.PASSWORD_MAX_LENGTH) {
-      errors.password = `Password must be at most ${VALIDATION_CONSTRAINTS.PASSWORD_MAX_LENGTH} characters`
+      errors.password = `Макс ${VALIDATION_CONSTRAINTS.PASSWORD_MAX_LENGTH} символов`
       return false
     }
     errors.password = null
@@ -218,12 +219,25 @@
 
 <template>
   <div class="account-item">
+    <div class="item-header">
+      <UButton
+        color="error"
+        variant="ghost"
+        icon="i-lucide-trash-2"
+        size="sm"
+        @click="handleDelete"
+      />
+    </div>
+
     <div class="form-grid">
       <div class="form-group">
-        <label class="form-label">Label</label>
+        <label class="form-label">
+          <UIcon name="i-lucide-tag" class="label-icon" />
+          Метка
+        </label>
         <UInput
           v-model="formState.labelInput"
-          placeholder="Enter labels separated by ;"
+          placeholder="Через точку с запятой"
           :class="labelInputClass"
           :color="touched.label && errors.label ? 'error' : 'neutral'"
           @blur="handleLabelBlur"
@@ -234,7 +248,10 @@
       </div>
 
       <div class="form-group">
-        <label class="form-label">Type *</label>
+        <label class="form-label">
+          <UIcon name="i-lucide-shield" class="label-icon" />
+          Тип *
+        </label>
         <USelect
           v-model="formState.type"
           :items="typeOptions"
@@ -248,11 +265,14 @@
         </span>
       </div>
 
-      <div class="form-group">
-        <label class="form-label">Login *</label>
+      <div class="form-group" :class="{ 'span-2': !showPassword }">
+        <label class="form-label">
+          <UIcon name="i-lucide-user" class="label-icon" />
+          Логин *
+        </label>
         <UInput
           v-model="formState.login"
-          placeholder="Enter login"
+          placeholder="Введи логин"
           :class="loginInputClass"
           :color="touched.login && errors.login ? 'error' : 'neutral'"
           @blur="handleLoginBlur"
@@ -262,31 +282,34 @@
         </span>
       </div>
 
-      <!-- only show for LOCAL accounts -->
       <div v-if="showPassword" class="form-group">
-        <label class="form-label">Password *</label>
+        <label class="form-label">
+          <UIcon name="i-lucide-lock" class="label-icon" />
+          Пароль *
+        </label>
         <UInput
           v-model="formState.password"
-          type="password"
-          placeholder="Enter password"
+          :type="passwordVisible ? 'text' : 'password'"
+          placeholder="Введи пароль"
           :class="passwordInputClass"
           :color="touched.password && errors.password ? 'error' : 'neutral'"
+          :ui="{ trailing: 'pr-1' }"
           @blur="handlePasswordBlur"
-        />
+        >
+          <template #trailing>
+            <UButton
+              color="neutral"
+              variant="ghost"
+              size="sm"
+              :icon="passwordVisible ? 'i-lucide-eye-off' : 'i-lucide-eye'"
+              :aria-label="passwordVisible ? 'Скрыть' : 'Показать'"
+              @click="passwordVisible = !passwordVisible"
+            />
+          </template>
+        </UInput>
         <span v-if="touched.password && errors.password" class="error-message">
           {{ errors.password }}
         </span>
-      </div>
-
-      <div class="form-group delete-group">
-        <UButton
-          color="error"
-          variant="soft"
-          icon="i-lucide-trash-2"
-          @click="handleDelete"
-        >
-          Delete
-        </UButton>
       </div>
     </div>
   </div>
@@ -297,13 +320,20 @@
     background-color: var(--ui-bg-muted);
     border: 1px solid var(--ui-border);
     border-radius: 8px;
-    padding: 1.5rem;
+    padding: 1rem 1.5rem 1.5rem;
     margin-bottom: 1rem;
+    position: relative;
+  }
+
+  .item-header {
+    display: flex;
+    justify-content: flex-end;
+    margin-bottom: 0.5rem;
   }
 
   .form-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    grid-template-columns: repeat(4, 1fr);
     gap: 1rem;
     align-items: start;
   }
@@ -312,24 +342,46 @@
     display: flex;
     flex-direction: column;
     gap: 0.25rem;
+    position: relative;
+    padding-bottom: 1rem;
+  }
+
+  .span-2 {
+    grid-column: span 2;
   }
 
   .form-label {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
     font-size: 0.875rem;
     font-weight: 500;
     color: var(--ui-text);
   }
 
-  .error-message {
-    font-size: 0.75rem;
-    color: var(--ui-error);
+  .label-icon {
+    font-size: 0.9rem;
+    opacity: 0.6;
   }
 
-  .delete-group {
-    display: flex;
-    align-items: flex-end;
-    justify-content: flex-start;
-    padding-top: 1.25rem;
+  .error-message {
+    position: absolute;
+    bottom: -0.25rem;
+    left: 0.5rem;
+    font-size: 0.75rem;
+    color: var(--ui-error);
+    animation: slideUp 0.2s ease-out;
+  }
+
+  @keyframes slideUp {
+    from {
+      opacity: 0;
+      transform: translateY(4px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
   }
 
   .error-input :deep(input),
@@ -337,12 +389,18 @@
     border-color: var(--ui-error) !important;
   }
 
-  @media (max-width: 768px) {
+  @media (max-width: 900px) {
+    .form-grid {
+      grid-template-columns: repeat(2, 1fr);
+    }
+  }
+
+  @media (max-width: 500px) {
     .form-grid {
       grid-template-columns: 1fr;
     }
-    .delete-group {
-      padding-top: 0.5rem;
+    .span-2 {
+      grid-column: span 1;
     }
   }
 </style>
